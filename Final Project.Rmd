@@ -1,0 +1,242 @@
+---
+title: "Video Games Market Investment"
+author: "Huy Huynh"
+date: "4/16/2020"
+output:
+  html_document: 
+    theme: united
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction:
+
+Over a few decades, gaming has been at the heart of the entertainment business across the globe. In fact, among gaming, video games are the most booming entertainment business that people of all ages enjoy them very much. Hence, they are reshaping how human beings interact with the world. 
+
+Importantly, they economically contribute enormous revenues to local as well as regional markets. The gaming industry has been driving companies like Google, Microsoft, or Sony to create new games with new ideas and innovation to satisfy the billions of gamers’ demand around the world. However, consumers’ demand engage with games is constantly changing. Therefore, the aim of this project is to observe consumption of video games around the world and analyze the trends in the popularity of genre.
+
+By manipulating this data, developers and companies obviously obtain helpful information such as the most popular genres and regions with high levels of video game consumption, which give them a hint how to develope a successful video game launch along with popularity generes.
+
+## Packages Required:
+```{r}
+#install.packages("kableExtra")
+#install.packages('tinytex')
+#install.packages("corrplot")
+```
+
+```{r}
+library(dplyr) # Data Manipulation
+library(plyr) # Set Combination
+library(tidyverse) # Data Wraggling
+library(ggplot2) # Data Visualization
+library(knitr) # Table Custom
+library(kableExtra) # Table Custom
+library(corrplot) # Correlogram
+```
+
+
+
+## Data Preparation
+
+The dataset was compiled from a network known as vgchartz. The script to scrape the data is available at https://github.com/GregorUT/vgchartzScrape.
+
+Vgchartz collects their data through calculated estimates, polls with video game retailers and video game communities, studying resale prices to determine popularity and consulting directly with developers and retail stores
+
+The dataset was completed late October of 2016, the video game sales for November and December have not been input. Hence, this obvisouly presents a possible issue for 2016 trends since November and December often produce the highest sales during the year.
+
+In addition, video games for former game platforms such as the PS3 have been discountinued which will inevitably reduce sales regardless of popularity.
+
+```{r}
+# Load data
+vgsales = read.csv("vgsales.csv")
+```
+
+```{r}
+# Quick Look at Variable Names in this data set
+glimpse(vgsales)
+```
+
+```{r}
+# Quick look at top 5 rows of data
+head(vgsales)
+```
+
+```{r}
+# Quick look at bottom 5 rows of data
+tail(vgsales)
+```
+
+```{r}
+summary(vgsales)
+```
+
+Although video games are popular across the globe, understanding some largest markets and popular genre type is extremely important for developers in hit the point and increase their  market. According to the above general summary, Action is the most popular genre among video games and North America, Europe, and Japan are the biggest markets contributing to gobal sale. With a quick glimpse, North America almost takes over portion in whole wolrd sale, which indicates this is the most potential market.
+
+```{r}
+vgsales$Year <- as.numeric(as.character(vgsales$Year))
+vgsales<- na.omit(vgsales)
+# In order to get better data visualization, this function is good to return the data with listwise deletion of missing values.
+```
+
+## Exploratory Data Analysis
+
+Let's take a look at Sales Trend across the market
+
+```{r}
+# Using aggregate() function in R to create the sum of all sales across regions and group by Year
+Global.trend<-aggregate(vgsales$Global_Sales, by=list(Year=vgsales$Year), FUN=sum)
+NA.trend<-aggregate(vgsales$NA_Sales, by=list(Year=vgsales$Year), FUN=sum)
+EU.trend<-aggregate(vgsales$EU_Sales, by=list(Year=vgsales$Year), FUN=sum)
+JP.trend<-aggregate(vgsales$JP_Sales, by=list(Year=vgsales$Year), FUN=sum)
+Other.trend<-aggregate(vgsales$Other_Sales, by=list(Year=vgsales$Year), FUN=sum)
+```
+
+```{r}
+#Creating a join subset to demonstrate Sale Trend
+EU.sales<-EU.trend$x
+NA.sales<-NA.trend$x
+JP.sales<-JP.trend$x
+Other.sales<-Other.trend$x
+Global.sales<- Global.trend$x
+year<-NA.trend$Year 
+Sale_trend.df<-data.frame(year, NA.sales, EU.sales, JP.sales, Other.sales,Global.sales)
+```
+
+```{r}
+ggplot(Sale_trend.df, aes(x= year,group = 1)) + 
+  geom_line(aes(y = NA.sales , colour = "NA Sales"),size=1) + 
+  geom_line(aes( y = EU.sales, colour = "EU Sales"),size=1)+
+  geom_line(aes( y= JP.sales, colour='JP Sales'),size=1)+
+  geom_line(aes( y= Other.sales,colour='Other Sales'),size=1) +
+  geom_line(aes( y= Global.sales, colour = "Global Sales"), size = 1 ) +
+  ylab('Count in Million Dollar') +
+  xlab('Year') + 
+  ggtitle(label = "Figure 1: Video Games Sale Trend Across the Market") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust=0.5,face='bold'))
+```
+
+The sales trend depicts that the sales at all regions across the globe has rapidly increased over the time and its peaks is in 2008. However, since that year, the market sales started to be falling downfowrad. Whatever the sale trend is, North America (NA), Europe (EU), and Japan(JP) are the most heavily consumed video games market. 
+
+Is there any evidence of differences between sales in different regions of the world?
+
+```{r}
+sales <- vgsales[,c("NA_Sales","EU_Sales","JP_Sales","Other_Sales")]
+S <- cor(sales)
+corrplot(S, method = "number", title = "Figure 2: Correlation of Sales by Region", mar=c(0,0,1,0))
+```
+
+The fact that, they all have followed a similar trend with the global sale. Sales is different in regions. Among the top three, as can be seen in above figure, sales in North America and Europe had the strongest correlation of the region while Japan was weakly correlated with the others.  Clearly, sales in the regions differ with North America always contribute a incredible mount to global revenue, then Europe, then Japan.
+
+But what is the exact percenatge of North America sale contributing to Global sales?
+
+```{r}
+NA_vs_Global <- NA.trend$x/Global.trend$x * 100
+summary(NA_vs_Global)
+```
+
+Thanks to some information listed above, North America revenues obviously has been contributing at least 50 percent to Global market. Therefore, North America is such a great market to invest in. 
+
+Now, we take a look at the top 10 Publisher regarding to regarding to Global Revenue
+
+```{r} 
+#Using aggregate() function in R to create the sum of global sales across rand group by Publisher
+TopPublishers <- aggregate(vgsales$Global_Sales,list(vgsales$Publisher),sum) 
+TopPublishers <- TopPublishers[with(TopPublishers, order(-x)), ]
+rownames(TopPublishers) <- NULL
+```
+
+```{r}
+#Selecting only Top 10 of the list
+Top10Publishers <- head(TopPublishers, 10) %>% 
+  rename(c("Group.1" = "Publishers", "x" = "Total Sale"))
+```
+
+```{r}
+# This package allows me to modify a table with desirable variables
+kable(Top10Publishers, caption = "Figure 3: A Table of Top 10 Publishers", booktabs = T) %>% 
+  kable_styling(full_width = T) %>%
+  column_spec(1, bold = T,border_right = T, width = 40 ,color = "red")
+```
+
+Nintendo is the publisher having the top sale and outstanding from the others.
+
+In which genre has most of the games released?
+
+```{r}
+GenreByYear <- aggregate(vgsales$Global_Sales,list(vgsales$Genre, vgsales$Year),sum)
+colnames(GenreByYear) <- c("Genre", "Year", "TotalSales")
+
+ggplot(GenreByYear) + 
+  geom_line(aes(x=Year, y=TotalSales, colour=Genre)) +
+  facet_wrap(~Genre) + 
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        plot.title = element_text(hjust=0.5,face='bold')) + 
+  ylab("Total Sale Count in Million Dollar") + 
+  ggtitle(label = "Figure 4: Genre Sale Over Year")
+```
+```{r}
+vgsales %>% 
+  select(Genre) %>% 
+  group_by(Genre) %>% 
+  dplyr::summarise(count = n()) %>% 
+  arrange(desc(count)) %>% 
+  mutate(Percentage = round(count/sum(count) *100, digits = 2)) %>% 
+  ggplot(aes(Genre,count,fill=Genre))+
+  geom_bar(stat="identity")+
+  geom_label(aes(label= Percentage),size=2)+
+  theme(axis.text.x = element_text(angle=45,vjust =0.5, hjust = 0.5),
+        plot.title = element_text(hjust=0.5,face='bold'),
+        legend.position="none") +
+  ggtitle("Figure 5: Games Among Genre")+
+  labs(x="Genre",y="Total of Games")
+```
+
+Undoubtedly, Action is the most popular genre. In fact, it is representing 19.92 % to total games and the runner-up is Sport with 14.11 %. As a result, Action is the most profitbale game genre.
+
+How about taking a look of top 10 games that are dominant in North America.
+
+```{r}
+NA_top10 <- vgsales %>%
+  select(Name,NA_Sales,Publisher) %>%
+  arrange(desc(NA_Sales))
+ggplot(head(NA_top10,10),aes(factor(Name,levels=Name),NA_Sales,fill=Publisher))+
+  geom_bar(stat="identity")+
+  theme(axis.text.x = element_text(angle=45,vjust=0.5, hjust = 0.5),plot.title = element_text(hjust=0.5,face='bold'),legend.position="bottom") +
+  ggtitle("Figure 6: Top 10 Games in North America") +
+  labs(x="Games ",y="Sales Count in Million Dollar")
+
+```
+
+Wii Sports from Nintendo is the best selling game in North America. Since this game contains multiple games inside, consumers tend to purchase this type which is easily accessible for both adults and children.
+
+Following previous Genre Analysis, I wonder if Action is still the most popular Genre in North America - the targeted market?
+
+Now, we could take a look of game genre among different regions as well as in the term of global aspect.
+
+```{r}
+temp<- vgsales %>% select(Genre,EU_Sales,JP_Sales,NA_Sales,Global_Sales)
+temp<- gather(temp,region,sales,2:5) 
+  ggplot(temp,aes(region,sales,fill=Genre))+
+  geom_bar(stat="identity",position=position_dodge())+
+  theme(plot.title = element_text(hjust=0.5,face='bold'), legend.position="bottom") +
+  ggtitle("Figure 7: Worldwide Game Genres")+
+  labs(x="Regions",y="Sales Count in Million Dollar")
+```
+
+Supringsingly, Sports is the greatest genre in the Global Sales. In level of region, it was consumed favoritely higher in Europe,and North America. That explains why Wii Sports has become dominent in North America market as it follows the global trend.
+
+## Summary:
+
+North America is the most heavily consumer for video game market followed by Europe and Japan. 
+Across the globe, the sale market was increasing rapidly until 2008 for all of regions.In spite of growth in video game over the past few decades, sales of recent releases appear to be lower than that of older games. In fact, sales had tendency to going downforward since 2008 and continued to the end of 2016. This trend was somehome related to the Global Economic Crisis that peopel lost jobs, had to stay at home and enjoyed video games. And after 2008, although so many video games were released but the sale was going down because of economy recovery and growth. As a result, the same trend is about to happen again with Covid 19, which indicates this could be a good time for game developers to spedd up and release new products to the market in order to satisfy customers demand and make profit. In addition, ultilizing above analysis, in the future, they should at times release new videos in order to avoid overwhelming damage cost to the companies as well as ineffective  sales in the market.
+
+Further, the popularity of Sports and Action genres has increased significantly. Action games made up a similar portion of each platforms sales and titles. Nintendo has had more successful platform games than the others followed by Electronic Arts and Activision. In detail, 9 over Top 10 games at North America were published by Nintendo. Hence, these represent a large portion of the games that Nintendo has been successful with.
+
+Further analysis might help to identify when a customer is looking to purchase a new system for video games, the types of games that they want to play will likely influence the decision. According to my own video game experiences, the Nintendo may be the best option for those who are looking for platform games and the ability to play sports and action games. But more stastical analysis is more higly recommended to provide further information.
+
